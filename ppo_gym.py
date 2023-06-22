@@ -91,20 +91,23 @@ else:
 policy_net.to(device)
 value_net.to(device)
 
-policy_net = MyPolicy(policy_net)
-policy_net.to(device)
+# policy_net = MyPolicy(policy_net)
+# policy_net.to(device)
 for name, para in policy_net.named_parameters():
     if name == 'linear1.weight' or name == 'linear1.bias':
         para.requires_grad = True
         print('unfreeze new linear layer')
-    if name == 'linear2.weight' or name == 'linear2.bias':
+    elif name == 'linear2.weight' or name == 'linear2.bias':
         para.requires_grad = True
         print('unfreeze new linear layer')
-    if name == 'resnet.fc.weight' or name == 'resnet.fc.bias':
+    elif name == 'resnet.classifier.weight' or name == 'resnet.classifier.bias':
         para.requires_grad = True
         print('unfreeze resnet linear layer')
     else:
         para.requires_grad = False
+
+for name, para in value_net.named_parameters():
+    para.requires_grad = False
 
 optimizer_policy = torch.optim.Adam(
     policy_net.parameters(), lr=args.learning_rate)
@@ -121,7 +124,8 @@ agent = Agent(env, policy_net, device, running_state=running_state,
 
 
 def update_params(batch, i_iter):
-    color_img = torch.from_numpy(batch.color_img).to(dtype).to(device)
+    color_img = torch.from_numpy(
+        np.stack(batch.color_img)).to(dtype).to(device)
     imgs_depth = torch.from_numpy(
         np.stack(batch.img_depth)).to(dtype).to(device)
     goals = torch.from_numpy(np.stack(batch.goal)).to(dtype).to(device)
@@ -155,11 +159,11 @@ def update_params(batch, i_iter):
         for i in range(optim_iter_num):
             ind = slice(i * optim_batch_size, min((i + 1) *
                         optim_batch_size, imgs_depth.shape[0]))
-            imgs_depth_b, goals_b, rays_b, hist_actions_b, actions_b, advantages_b, returns_b, fixed_log_probs_b = \
-                imgs_depth[ind], goals[ind], rays[ind], hist_actions[ind], \
+            color_img_b, imgs_depth_b, goals_b, rays_b, hist_actions_b, actions_b, advantages_b, returns_b, fixed_log_probs_b = \
+                color_img[ind], imgs_depth[ind], goals[ind], rays[ind], hist_actions[ind], \
                 actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind]
 
-            ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, 1, imgs_depth_b,
+            ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, 1, color_img_b, imgs_depth_b,
                      goals_b, rays_b, hist_actions_b, actions_b, returns_b, advantages_b,
                      fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
 
@@ -170,6 +174,7 @@ def main_loop():
         batch, log = agent.collect_samples(
             args.min_batch_size, render=args.render)
         t0 = time.time()
+        print('updating params')
         update_params(batch, i_iter)
         t1 = time.time()
         """evaluate with determinstic action (remove noise for exploration)"""

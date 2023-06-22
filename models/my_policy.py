@@ -24,8 +24,8 @@ class MyPolicy(nn.Module):
         # two dimensions of actions: upward and downward; turning
         self.img_goal_ray2 = pretrained.img_goal_ray2
 
-        self.resnet = torchvision.models.resnet50(pretrained=True)
-        self.resnet.fc = nn.Linear(2048, 512)
+        self.resnet = torchvision.models.mobilenet_v3_small(pretrained=True)
+        self.resnet.classifier = nn.Linear(576, 512)
         self.linear1 = nn.Linear(512, 512)
         self.linear2 = nn.Linear(512, 96)
 
