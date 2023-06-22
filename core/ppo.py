@@ -5,15 +5,15 @@ def ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, optim_val
              goals, rays, hist_actions, actions, returns, advantages, fixed_log_probs, clip_epsilon, l2_reg):
 
     """update critic"""
-    for _ in range(optim_value_iternum):
-        values_pred = value_net(imgs_depth, goals, rays, hist_actions)
-        value_loss = (values_pred - returns).pow(2).mean()
-        # weight decay
-        for param in value_net.parameters():
-            value_loss += param.pow(2).sum() * l2_reg
-        optimizer_value.zero_grad()
-        # value_loss.backward()
-        optimizer_value.step()
+    # for _ in range(optim_value_iternum):
+    #     values_pred = value_net(imgs_depth, goals, rays, hist_actions)
+    #     value_loss = (values_pred - returns).pow(2).mean()
+    #     # weight decay
+    #     for param in value_net.parameters():
+    #         value_loss += param.pow(2).sum() * l2_reg
+    #     optimizer_value.zero_grad()
+    #     value_loss.backward()
+    #     optimizer_value.step()
 
     """update policy"""
     log_probs = policy_net.get_log_prob(color_img, imgs_depth, goals, rays, hist_actions, actions)
