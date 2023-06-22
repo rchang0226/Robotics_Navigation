@@ -94,9 +94,15 @@ value_net.to(device)
 policy_net = MyPolicy(policy_net)
 policy_net.to(device)
 for name, para in policy_net.named_parameters():
-    if name == 'img_goal_ray1.weight' or name == 'img_goal_ray1.bias':
+    if name == 'linear1.weight' or name == 'linear1.bias':
         para.requires_grad = True
         print('unfreeze new linear layer')
+    if name == 'linear2.weight' or name == 'linear2.bias':
+        para.requires_grad = True
+        print('unfreeze new linear layer')
+    if name == 'resnet.fc.weight' or name == 'resnet.fc.bias':
+        para.requires_grad = True
+        print('unfreeze resnet linear layer')
     else:
         para.requires_grad = False
 
@@ -115,6 +121,7 @@ agent = Agent(env, policy_net, device, running_state=running_state,
 
 
 def update_params(batch, i_iter):
+    color_img = torch.from_numpy(batch.color_img).to(dtype).to(device)
     imgs_depth = torch.from_numpy(
         np.stack(batch.img_depth)).to(dtype).to(device)
     goals = torch.from_numpy(np.stack(batch.goal)).to(dtype).to(device)
@@ -126,8 +133,8 @@ def update_params(batch, i_iter):
     masks = torch.from_numpy(np.stack(batch.mask)).to(dtype).to(device)
     with torch.no_grad():
         values = value_net(imgs_depth, goals, rays, hist_actions)
-        fixed_log_probs = policy_net.get_log_prob(
-            imgs_depth, goals, rays, hist_actions, actions)
+        fixed_log_probs = policy_net.get_log_prob(color_img,
+                                                  imgs_depth, goals, rays, hist_actions, actions)
 
     """get advantage estimation from the trajectories"""
     advantages, returns = estimate_advantages(

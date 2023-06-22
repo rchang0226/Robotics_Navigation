@@ -9,8 +9,10 @@ import sys
 import signal
 os.environ["OMP_NUM_THREADS"] = "1"
 
+
 def signal_handler(sig, frame):
     sys.exit(0)
+
 
 def collect_samples(pid, queue, env, policy, custom_reward,
                     mean_action, render, running_state, min_batch_size, training=True):
@@ -37,13 +39,14 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     print(time.time())
 
     while num_steps < min_batch_size:
-        img_depth, goal, ray, hist_action = env.reset()
+        color_img, img_depth, goal, ray, hist_action = env.reset()
         if running_state is not None:
             # print "before", img_depth.shape, goal.shape, img_depth.dtype
             # print "first_depth_before:", np.max(img_depth), "first_goal_before:", np.max(goal)
             # print(np.shape(img_depth), np.shape(goal), np.shape(ray), np.shape(hist_action), "\n\n\n")
             _, goal, ray = running_state(img_depth, goal, ray)
-            img_depth = np.float64((img_depth - 0.5) / 0.5) # the predicted depth ranges from 0 - 1
+            # the predicted depth ranges from 0 - 1
+            img_depth = np.float64((img_depth - 0.5) / 0.5)
             hist_action = np.float64(hist_action)
             # print "first_depth_after:", np.max(img_depth), "first_goal_after:", np.max(goal)
             # print "after", img_depth.shape, goal.shape, img_depth.dtype
@@ -56,22 +59,28 @@ def collect_samples(pid, queue, env, policy, custom_reward,
         for t in range(10000):
             # print t
             signal.signal(signal.SIGINT, signal_handler)
+            color_img_var = tensor(color_img).unsqueeze(0)
             img_depth_var = tensor(img_depth).unsqueeze(0)
             goal_var = tensor(goal).unsqueeze(0)
             ray_var = tensor(ray).unsqueeze(0)
             hist_action_var = tensor(hist_action).unsqueeze(0)
             with torch.no_grad():
                 if mean_action:
-                    action = policy(img_depth_var, goal_var, ray_var, hist_action_var)[0][0].numpy()
+                    action = policy(color_img_var, img_depth_var, goal_var,
+                                    ray_var, hist_action_var)[0][0].numpy()
                 else:
-                    action = policy.select_action(img_depth_var, goal_var, ray_var, hist_action_var)[0].numpy()
-            action = int(action) if policy.is_disc_action else action.astype(np.float64)
-            next_img_depth, next_goal, next_ray, next_hist_action, reward, done, _ = env.step(action)
+                    action = policy.select_action(color_img_var,
+                                                  img_depth_var, goal_var, ray_var, hist_action_var)[0].numpy()
+            action = int(action) if policy.is_disc_action else action.astype(
+                np.float64)
+            next_color_img, next_img_depth, next_goal, next_ray, next_hist_action, reward, done, _ = env.step(
+                action)
             reward_episode += reward
             if running_state is not None:
                 # print "before", next_img_depth.shape, next_goal.shape
                 # print "depth_before:", np.max(next_img_depth), np.min(next_img_depth), "goal_before:", np.max(next_goal), np.min(goal)
-                _, next_goal, next_ray = running_state(next_img_depth, next_goal, next_ray)
+                _, next_goal, next_ray = running_state(
+                    next_img_depth, next_goal, next_ray)
                 next_img_depth = np.float64((next_img_depth - 0.5) / 0.5)
                 next_hist_action = np.float64(next_hist_action)
                 # print next_img_depth
@@ -80,7 +89,8 @@ def collect_samples(pid, queue, env, policy, custom_reward,
             else:
                 next_img_depth, next_goal, next_ray, next_hist_action = \
                     next_img_depth.astype(np.float64), next_goal.astype(np.float64),\
-                    next_ray.astype(np.float64), next_hist_action.astype(np.float64)
+                    next_ray.astype(
+                        np.float64), next_hist_action.astype(np.float64)
 
             if custom_reward is not None:
                 reward = custom_reward(img_depth, goal, ray, action)
@@ -90,7 +100,7 @@ def collect_samples(pid, queue, env, policy, custom_reward,
 
             mask = 0 if done else 1
 
-            memory.push(img_depth, goal, ray, hist_action, action, mask,
+            memory.push(color_img, img_depth, goal, ray, hist_action, action, mask,
                         next_img_depth, next_goal, next_hist_action, reward)
 
             if render:
@@ -102,6 +112,7 @@ def collect_samples(pid, queue, env, policy, custom_reward,
                     num_steps_episodes += t
                 break
 
+            color_img = next_color_img
             img_depth = next_img_depth
             goal = next_goal
             ray = next_ray
@@ -117,7 +128,8 @@ def collect_samples(pid, queue, env, policy, custom_reward,
         max_reward = max(max_reward, reward_episode)
 
         if training == False:
-            my_open = open(os.path.join(assets_dir(), 'learned_models/test_pos.txt'), "a")
+            my_open = open(os.path.join(
+                assets_dir(), 'learned_models/test_pos.txt'), "a")
             data = [str(reward_episode), "\n\n"]
             for element in data:
                 my_open.write(element)
@@ -137,7 +149,8 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     log['ratio_success'] = float(num_episodes_success) / float(num_episodes)
     log['avg_last_reward'] = reward_done / num_episodes
     if num_episodes_success != 0:
-        log['avg_steps_success'] = float(num_steps_episodes) / float(num_episodes_success)
+        log['avg_steps_success'] = float(
+            num_steps_episodes) / float(num_episodes_success)
     else:
         log['avg_steps_success'] = 0
 
@@ -192,13 +205,14 @@ class Agent:
             env = self.env[i+1]
             worker_args = (i+1, queue, env, self.policy, self.custom_reward, mean_action,
                            False, self.running_state, thread_batch_size, self.training)
-            workers.append(multiprocessing.Process(target=collect_samples, args=worker_args))
+            workers.append(multiprocessing.Process(
+                target=collect_samples, args=worker_args))
         for worker in workers:
             worker.start()
 
         memory, log = collect_samples(0, None, self.env[0], self.policy, self.custom_reward, mean_action,
                                       render, self.running_state, thread_batch_size, training=self.training)
-                                      # render, None, thread_batch_size)
+        # render, None, thread_batch_size)
 
         worker_logs = [None] * len(workers)
         worker_memories = [None] * len(workers)
