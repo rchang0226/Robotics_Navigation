@@ -338,7 +338,7 @@ class Underwater_navigation():
         # cv2.imwrite("img_rgb_reset.png", 256 * cv2.cvtColor(obs_img_ray[0] ** 0.45, cv2.COLOR_RGB2BGR))
         # cv2.imwrite("img_depth_pred_reset.png", 256 * self.obs_preddepths[0])
 
-        color_img = cv2.resize(obs_img_ray[0], dsize=(240, 180))
+        color_img = cv2.resize(obs_img_ray[0], dsize=(240, 180), interpolation=cv2.INTER_AREA)
 
         return color_img, self.obs_preddepths, self.obs_goals, self.obs_rays, self.obs_actions
 
@@ -484,7 +484,7 @@ class Underwater_navigation():
                 my_open.write(element)
             my_open.close()
 
-        color_img = cv2.resize(obs_img_ray[0], dsize=(160, 120))
+        color_img = cv2.resize(obs_img_ray[0], dsize=(160, 120), interpolation=cv2.INTER_AREA)
 
         return color_img, self.obs_preddepths, self.obs_goals, self.obs_rays, self.obs_actions, reward, done, 0
 
