@@ -36,7 +36,7 @@ class MyPolicy(nn.Module):
 
     def forward(self, color_img, depth_img, goal, ray, hist_action):
         color_img = color_img.permute(0, 3, 1, 2)
-        color_img = torchvision.transforms.Resize((120, 160))(color_img)
+        # color_img = torchvision.transforms.Resize((120, 160))(color_img)
         color_img = self.relu(self.linear1(
             self.resnet(color_img.double())))
         color_img = self.relu(self.linear2(color_img))

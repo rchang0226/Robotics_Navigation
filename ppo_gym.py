@@ -123,6 +123,9 @@ agent = Agent(env, policy_net, device, running_state=running_state,
 
 
 def update_params(batch, i_iter):
+    # color_img = torch.from_numpy(np.stack(batch.color_img))
+    # color_img = color_img.permute(0, 3, 1, 2)
+    # color_img = torchvision.transforms.Resize((120, 160))(color_img)
     color_img = torch.from_numpy(
         np.stack(batch.color_img)).to(dtype).to(device)
     imgs_depth = torch.from_numpy(
@@ -208,6 +211,7 @@ def main_loop():
         my_open.close()
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
+            print('saving model')
             to_device(torch.device('cpu'), policy_net, value_net)
             if args.randomization == 1:
                 if args.adaptation == 1:
