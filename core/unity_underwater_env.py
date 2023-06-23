@@ -484,7 +484,7 @@ class Underwater_navigation():
                 my_open.write(element)
             my_open.close()
 
-        color_img = cv2.resize(obs_img_ray[0], dsize=(160, 120), interpolation=cv2.INTER_AREA)
+        color_img = cv2.resize(obs_img_ray[0], dsize=(240, 180), interpolation=cv2.INTER_AREA)
 
         return color_img, self.obs_preddepths, self.obs_goals, self.obs_rays, self.obs_actions, reward, done, 0
 
