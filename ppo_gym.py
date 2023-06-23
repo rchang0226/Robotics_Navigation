@@ -105,8 +105,8 @@ for name, para in policy_net.named_parameters():
     else:
         para.requires_grad = False
 
-for name, para in value_net.named_parameters():
-    para.requires_grad = False
+# for name, para in value_net.named_parameters():
+#     para.requires_grad = False
 
 optimizer_policy = torch.optim.Adam(
     policy_net.parameters(), lr=args.learning_rate)
