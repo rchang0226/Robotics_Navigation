@@ -26,8 +26,7 @@ class MyPolicy(nn.Module):
 
         self.resnet = torchvision.models.mobilenet_v3_small(pretrained=True)
         self.resnet.classifier = nn.Linear(576, 512)
-        self.linear1 = nn.Linear(512, 512)
-        self.linear2 = nn.Linear(512, 96)
+        self.linear1 = nn.Linear(512, 96)
 
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
@@ -39,7 +38,6 @@ class MyPolicy(nn.Module):
         # color_img = torchvision.transforms.Resize((120, 160))(color_img)
         color_img = self.relu(self.linear1(
             self.resnet(color_img.double())))
-        color_img = self.relu(self.linear2(color_img))
 
         depth_img = self.relu(self.conv1(depth_img))
         depth_img = self.relu(self.conv2(depth_img))
