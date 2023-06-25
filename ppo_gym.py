@@ -99,7 +99,7 @@ for name, para in policy_net.named_parameters():
     elif name == 'linear2.weight' or name == 'linear2.bias':
         para.requires_grad = True
         print('unfreeze new linear layer')
-    elif name == 'resnet.classifier.weight' or name == 'resnet.classifier.bias':
+    elif name == 'resnet.fc.weight' or name == 'resnet.fc.bias':
         para.requires_grad = True
         print('unfreeze resnet linear layer')
     else:
