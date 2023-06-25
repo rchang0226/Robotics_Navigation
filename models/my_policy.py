@@ -24,9 +24,10 @@ class MyPolicy(nn.Module):
         # two dimensions of actions: upward and downward; turning
         self.img_goal_ray2 = pretrained.img_goal_ray2
 
-        self.resnet = torchvision.models.mobilenet_v3_small(pretrained=True)
-        self.resnet.classifier = nn.Linear(576, 512)
-        self.linear1 = nn.Linear(512, 96)
+        self.resnet = torchvision.models.resnet50(pretrained=True)
+        self.resnet.fc = nn.Linear(2048, 512)
+        self.linear1 = nn.Linear(512, 512)
+        self.linear2 = nn.Linear(512, 96)
 
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
@@ -35,9 +36,9 @@ class MyPolicy(nn.Module):
 
     def forward(self, color_img, depth_img, goal, ray, hist_action):
         color_img = color_img.permute(0, 3, 1, 2)
-        # color_img = torchvision.transforms.Resize((120, 160))(color_img)
         color_img = self.relu(self.linear1(
             self.resnet(color_img.double())))
+        color_img = self.relu(self.linear2(color_img))
 
         depth_img = self.relu(self.conv1(depth_img))
         depth_img = self.relu(self.conv2(depth_img))
