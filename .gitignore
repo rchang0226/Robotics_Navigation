@@ -8,3 +8,5 @@
 /Unity
 .vscode/
 /images
+yolov5s.pt
+/runs
