@@ -17,15 +17,15 @@ class Policy(nn.Module):
 
         """ layers for inputs of goals and rays """
         self.resnet = torchvision.models.resnet50(pretrained=True)
-        self.resnet.fc = nn.Linear(2048, 512)
-        self.linear = nn.Linear(512, 96)
+        self.resnet.fc = nn.Linear(2048, 1024)
+        self.linear = nn.Linear(1024, 512)
         # self.fc_goal = nn.Linear(HIST * 3, 96)
         self.fc_ray = nn.Linear(HIST * 1, 32)
         self.fc_action = nn.Linear(HIST * 2, 64)
 
         """ layers for inputs concatenated information """
-        self.img_goal_ray1 = nn.Linear(704, 512)
-        self.img_goal_ray2 = nn.Linear(512, action_dim) # two dimensions of actions: upward and downward; turning
+        self.img_goal_ray1 = nn.Linear(608, 304)
+        self.img_goal_ray2 = nn.Linear(304, action_dim) # two dimensions of actions: upward and downward; turning
 
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
@@ -35,11 +35,11 @@ class Policy(nn.Module):
         self.action_log_std = nn.Parameter(torch.ones(1, action_dim) * log_std)
 
     def forward(self, color_img, depth_img, goal, ray, hist_action):
-        depth_img = self.relu(self.conv1(depth_img))
-        depth_img = self.relu(self.conv2(depth_img))
-        depth_img = self.relu(self.conv3(depth_img))
-        depth_img = depth_img.view(depth_img.size(0), -1)
-        depth_img = self.relu(self.fc_img(depth_img))
+        # depth_img = self.relu(self.conv1(depth_img))
+        # depth_img = self.relu(self.conv2(depth_img))
+        # depth_img = self.relu(self.conv3(depth_img))
+        # depth_img = depth_img.view(depth_img.size(0), -1)
+        # depth_img = self.relu(self.fc_img(depth_img))
 
         color_img = color_img.permute(0, 3, 1, 2)
         color_img = self.relu(self.resnet(color_img.double()))
@@ -53,7 +53,7 @@ class Policy(nn.Module):
         hist_action = hist_action.view(hist_action.size(0), -1)
         hist_action = self.relu(self.fc_action(hist_action))
 
-        img_goal_ray_aciton = torch.cat((depth_img, color_img, ray, hist_action), 1)
+        img_goal_ray_aciton = torch.cat((color_img, ray, hist_action), 1)
         img_goal_ray_aciton = self.relu(self.img_goal_ray1(img_goal_ray_aciton))
         action_mean = self.tanh(self.img_goal_ray2(img_goal_ray_aciton))
 
