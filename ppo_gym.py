@@ -9,8 +9,8 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from utils import *
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
-from nnmodels.my_policy import MyPolicy
-from nnmodels.my_critic import MyValue
+from nnmodels.nn_policy import NNPolicy
+from nnmodels.nn_critic import NNValue
 from core.ppo import ppo_step
 from core.common import estimate_advantages
 from core.agent import Agent
@@ -167,8 +167,8 @@ if args.model_path is None:
     value_net = Value(args.hist_length)
 else:
     policy_net, value_net, running_state = pickle.load(open(args.model_path, "rb"))
-policy_net = MyPolicy(policy_net)
-value_net = MyValue(value_net)
+policy_net = NNPolicy(policy_net)
+value_net = NNValue(value_net)
 policy_net.to(device)
 value_net.to(device)
 
