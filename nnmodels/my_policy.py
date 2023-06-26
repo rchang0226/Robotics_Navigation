@@ -29,6 +29,8 @@ class MyPolicy(nn.Module):
         self.linear1 = nn.Linear(512, 512)
         self.linear2 = nn.Linear(512, 96)
 
+        self.yolo = torch.hub.load("ultralytics/yolov5", "yolov5s", pretrained=True)
+
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
 
@@ -37,9 +39,11 @@ class MyPolicy(nn.Module):
     def forward(self, color_img, depth_img, goal, ray, hist_action):
         color_img = color_img.permute(0, 3, 1, 2)
         # color_img = torchvision.transforms.Resize((120, 160))(color_img)
-        color_img = self.relu(self.linear1(
-            self.resnet(color_img.double())))
-        color_img = self.relu(self.linear2(color_img))
+        # color_img = self.relu(self.linear1(
+        #     self.resnet(color_img.double())))
+        # color_img = self.relu(self.linear2(color_img))
+        results = self.yolo(color_img)
+        print(results.pandas().xyxy[0])
 
         depth_img = self.relu(self.conv1(depth_img))
         depth_img = self.relu(self.conv2(depth_img))
@@ -53,10 +57,8 @@ class MyPolicy(nn.Module):
         hist_action = hist_action.view(hist_action.size(0), -1)
         hist_action = self.relu(self.fc_action(hist_action))
 
-        img_goal_ray_aciton = torch.cat(
-            (depth_img, color_img, ray, hist_action), 1)
-        img_goal_ray_aciton = self.relu(
-            self.img_goal_ray1(img_goal_ray_aciton))
+        img_goal_ray_aciton = torch.cat((depth_img, color_img, ray, hist_action), 1)
+        img_goal_ray_aciton = self.relu(self.img_goal_ray1(img_goal_ray_aciton))
         action_mean = self.tanh(self.img_goal_ray2(img_goal_ray_aciton))
 
         action_log_std = self.action_log_std.expand_as(action_mean)
@@ -66,7 +68,8 @@ class MyPolicy(nn.Module):
 
     def select_action(self, color_img, depth_img, goal, ray, hist_action):
         action_mean, _, action_std = self.forward(
-            color_img, depth_img, goal, ray, hist_action)
+            color_img, depth_img, goal, ray, hist_action
+        )
         # print "action:", action_mean, action_std
         action = torch.clamp(torch.normal(action_mean, action_std), -1, 1)
         # print action, "\n\n\n"
@@ -74,5 +77,6 @@ class MyPolicy(nn.Module):
 
     def get_log_prob(self, color_img, depth_img, goal, ray, hist_action, actions):
         action_mean, action_log_std, action_std = self.forward(
-            color_img, depth_img, goal, ray, hist_action)
+            color_img, depth_img, goal, ray, hist_action
+        )
         return normal_log_density(actions, action_mean, action_log_std, action_std)
