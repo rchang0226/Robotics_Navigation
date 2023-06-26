@@ -88,22 +88,16 @@ if args.model_path is None:
 else:
     policy_net, value_net, running_state = pickle.load(
         open(args.model_path, "rb"))
-policy_net = MyPolicy(policy_net)
+# policy_net = MyPolicy(policy_net)
 policy_net.to(device)
 value_net.to(device)
 
 for name, para in policy_net.named_parameters():
-    if name == 'linear1.weight' or name == 'linear1.bias':
-        para.requires_grad = True
-        print('unfreeze new linear layer')
-    elif name == 'linear2.weight' or name == 'linear2.bias':
-        para.requires_grad = True
-        print('unfreeze new linear layer')
-    elif name == 'resnet.fc.weight' or name == 'resnet.fc.bias':
-        para.requires_grad = True
-        print('unfreeze resnet linear layer')
-    else:
+    if 'resnet' in name:
         para.requires_grad = False
+        if name == 'resnet.fc.weight' or name == 'resnet.fc.bias':
+            para.requires_grad = True
+            print('linear still unfrozen')
 
 # for name, para in value_net.named_parameters():
 #     para.requires_grad = False
