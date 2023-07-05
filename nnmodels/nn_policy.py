@@ -3,34 +3,34 @@ import torch
 from util.mathpy import *
 
 
-class Policy(nn.Module):
-    def __init__(self, HIST, action_dim, log_std=0):
-        super(Policy, self).__init__()
-        self.is_disc_action = False
+class NNPolicy(nn.Module):
+    def __init__(self, pretrained):
+        super(NNPolicy, self).__init__()
+        self.is_disc_action = pretrained.is_disc_action
 
         """ layers for inputs of depth_images """
-        self.conv1 = nn.Conv2d(HIST, 32, (10, 14), (8, 8), padding=(1, 4))
-        self.conv2 = nn.Conv2d(32, 64, (4, 4), 2, padding=(1, 1))
-        self.conv3 = nn.Conv2d(64, 64, (3, 3), 1, padding=(1, 1))
-        self.fc_img = nn.Linear(8 * 10 * 64, 512)
+        self.conv1 = pretrained.conv1
+        self.conv2 = pretrained.conv2
+        self.conv3 = pretrained.conv3
+        self.fc_img = pretrained.fc_img
 
         """ layers for inputs of goals and rays """
-        self.fc_goal = nn.Linear(HIST * 3, 96)
-        self.fc_ray = nn.Linear(HIST * 1, 32)
-        self.fc_action = nn.Linear(HIST * 2, 64)
+        self.fc_goal = pretrained.fc_goal
+        self.fc_ray = pretrained.fc_ray
+        self.fc_action = pretrained.fc_action
 
         """ layers for inputs concatenated information """
-        self.img_goal_ray1 = nn.Linear(704, 512)
-        self.img_goal_ray2 = nn.Linear(
-            512, action_dim
+        self.img_goal_ray1 = pretrained.img_goal_ray1
+        self.img_goal_ray2 = (
+            pretrained.img_goal_ray2
         )  # two dimensions of actions: upward and downward; turning
 
-        self.relu = nn.ReLU()
-        self.tanh = nn.Tanh()
-        self.img_goal_ray2.weight.data.mul_(1)
-        self.img_goal_ray2.bias.data.mul_(0.0)
+        self.relu = pretrained.relu
+        self.tanh = pretrained.tanh
+        # self.img_goal_ray2.weight.data.mul_(1)
+        # self.img_goal_ray2.bias.data.mul_(0.0)
 
-        self.action_log_std = nn.Parameter(torch.ones(1, action_dim) * log_std)
+        self.action_log_std = pretrained.action_log_std
 
     def forward(self, depth_img, goal, ray, hist_action):
         depth_img = self.relu(self.conv1(depth_img))

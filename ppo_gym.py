@@ -5,7 +5,7 @@ from core.ppo import ppo_step
 from nnmodels.my_policy import MyPolicy
 from nnmodels.mlp_critic import Value
 from nnmodels.mlp_policy import Policy
-from utils import *
+from util import *
 import argparse
 import os
 import sys
@@ -202,7 +202,8 @@ def update_params(batch, i_iter):
     # color_img = torch.from_numpy(np.stack(batch.color_img))
     # color_img = color_img.permute(0, 3, 1, 2)
     # color_img = torchvision.transforms.Resize((120, 160))(color_img)
-    color_img = torch.from_numpy(np.stack(batch.color_img)).to(dtype).to(device)
+    # color_img = torch.from_numpy(np.stack(batch.color_img)).to(dtype).to(device)
+    color_img = batch.color_img[0]
     imgs_depth = torch.from_numpy(np.stack(batch.img_depth)).to(dtype).to(device)
     goals = torch.from_numpy(np.stack(batch.goal)).to(dtype).to(device)
     rays = torch.from_numpy(np.stack(batch.ray)).to(dtype).to(device)

@@ -1,4 +1,4 @@
-gym==0.21.0
+gym
 scipy==1.5.4
 matplotlib==3.3.4
 opencv-python

@@ -1,9 +1,9 @@
 import torch
-from utils import to_device
+from util import to_device
 
 
 def estimate_advantages(rewards, masks, values, gamma, tau, device):
-    rewards, masks, values = to_device(torch.device('cpu'), rewards, masks, values)
+    rewards, masks, values = to_device(torch.device("cpu"), rewards, masks, values)
     tensor_type = type(rewards)
     deltas = tensor_type(rewards.size(0), 1)
     advantages = tensor_type(rewards.size(0), 1)
