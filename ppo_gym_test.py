@@ -174,7 +174,12 @@ policy_net = Policy(
 policy_net.load_state_dict(torch.load("policy.pth"))
 policy_net.eval()
 
-running_state = ZFilter(img_depth_dim, goal_dim, ray_dim, clip=30)
+sys.modules["utils"] = sys.modules["util"]
+
+with open("running_state.p", "rb") as file:
+    running_state = pickle.load(file)
+
+sys.modules["utils"] = sys.modules.pop("util", None)
 
 policy_net.to(device)
 
