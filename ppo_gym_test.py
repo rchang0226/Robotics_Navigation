@@ -9,6 +9,7 @@ from util import *
 from core.agent import Agent
 from core.unity_underwater_env import Underwater_navigation
 from nnmodels.my_policy import MyPolicy
+from nnmodels.mlp_policy import Policy
 
 parser = argparse.ArgumentParser(description="PyTorch PPO example")
 parser.add_argument(
@@ -167,36 +168,14 @@ goal_dim = env[0].observation_space_goal
 ray_dim = env[0].observation_space_ray
 
 """define actor and critic"""
-if args.randomization == True:
-    policy_net, value_net, running_state = pickle.load(
-        open(
-            os.path.join(
-                assets_dir(),
-                "learned_models/{}_ppo_norand.p".format(
-                    args.env_name, args.hist_length
-                ),
-            ),
-            "rb",
-        )
-    )
-else:
-    policy_net, value_net, running_state = pickle.load(
-        open(
-            os.path.join(
-                assets_dir(),
-                "learned_models/{}_ppo_norand_10_250iters.p".format(
-                    args.env_name,
-                    # open(os.path.join(assets_dir(), 'learned_models/{}_ppo_norand_2000_250iters.p'.format(args.env_name,
-                    # open(os.path.join(assets_dir(), 'learned_models/{}_ppo_rand_noechosounder_250iters.p'.format(args.env_name,
-                    # open(os.path.join(assets_dir(), 'learned_models/{}_ppo_rand_250iters.p'.format(args.env_name,
-                    args.hist_length,
-                ),
-            ),
-            "rb",
-        )
-    )
+policy_net = Policy(
+    args.hist_length, env[0].action_space.shape[0], log_std=args.log_std
+)
+policy_net.load_state_dict(torch.load("policy.pth"))
+policy_net.eval()
 
-policy_net = MyPolicy(policy_net)
+running_state = ZFilter(img_depth_dim, goal_dim, ray_dim, clip=30)
+
 policy_net.to(device)
 
 """create agent"""
