@@ -33,6 +33,11 @@ class NNPolicy(nn.Module):
         self.action_log_std = pretrained.action_log_std
 
     def forward(self, depth_img, goal, ray, hist_action):
+        print(depth_img.shape)
+        print(goal.shape)
+        print(ray.shape)
+        print(hist_action.shape)
+
         depth_img = self.relu(self.conv1(depth_img))
         depth_img = self.relu(self.conv2(depth_img))
         depth_img = self.relu(self.conv3(depth_img))
