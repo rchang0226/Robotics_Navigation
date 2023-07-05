@@ -408,17 +408,31 @@ class Underwater_navigation:
         color_img = cv2.resize(color_img, dsize=(320, 256))
         color_img = yolo(color_img)
 
+        if "bottle" in color_img.pandas().xyxy[0]["name"].values:
+            print(color_img.pandas().xyxy[0]["name"][0])
+            xmin = color_img.pandas().xyxy[0]["xmin"][0]
+            xmax = color_img.pandas().xyxy[0]["xmax"][0]
+            ymin = color_img.pandas().xyxy[0]["ymin"][0]
+            ymax = color_img.pandas().xyxy[0]["ymax"][0]
+            xmid = (xmin + xmax) / 2
+            xmid = int(xmid / 2)
+            ymid = (ymin + ymax) / 2
+            ymid = int(ymid / 2)
+            # deep = depth[ymid, xmid]
+
+            # vfov = 64 ish
+            # hfov = 80
+            size = (xmax - xmin) * (ymax - ymin) / 4
+            depth = 1 / size * 1200
+            vdeg = (64 - ymid) / 2
+            horizontal = depth * abs(math.cos(math.radians(vdeg)))
+            vertical = depth * math.sin(math.radians(vdeg))
+            hdeg = (80 - xmid) / 2
+            self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
+        else:
+            print("Using known goal location")
+
         return (
-            (
-                color_img,
-                256 * self.obs_preddepths[0],
-                256 * obs_img_ray[0] ** 0.45,
-                (
-                    obs_goal_depthfromwater[0],
-                    obs_goal_depthfromwater[1],
-                    obs_goal_depthfromwater[2],
-                ),
-            ),
             self.obs_preddepths,
             self.obs_goals,
             self.obs_rays,
@@ -579,7 +593,35 @@ class Underwater_navigation:
             obs_preddepth, self.obs_preddepths[: (self.HIST - 1), :, :], axis=0
         )
 
+        color_img = cv2.resize(256 * obs_img_ray[0] ** 0.45, dsize=(320, 256))
+        color_img = yolo(color_img)
+
         obs_goal = np.reshape(np.array(obs_goal_depthfromwater[0:3]), (1, DIM_GOAL))
+
+        if "bottle" in color_img.pandas().xyxy[0]["name"].values:
+            print(color_img.pandas().xyxy[0]["name"][0])
+            xmin = color_img.pandas().xyxy[0]["xmin"][0]
+            xmax = color_img.pandas().xyxy[0]["xmax"][0]
+            ymin = color_img.pandas().xyxy[0]["ymin"][0]
+            ymax = color_img.pandas().xyxy[0]["ymax"][0]
+            xmid = (xmin + xmax) / 2
+            xmid = int(xmid / 2)
+            ymid = (ymin + ymax) / 2
+            ymid = int(ymid / 2)
+            # deep = depth[ymid, xmid]
+
+            # vfov = 64 ish
+            # hfov = 80
+            size = (xmax - xmin) * (ymax - ymin) / 4
+            depth = 1 / size * 1200
+            vdeg = (64 - ymid) / 2
+            horizontal = depth * abs(math.cos(math.radians(vdeg)))
+            vertical = depth * math.sin(math.radians(vdeg))
+            hdeg = (80 - xmid) / 2
+            obs_goal = np.reshape(np.array([horizontal, vertical, hdeg]), (1, DIM_GOAL))
+        else:
+            print("Using known goal location")
+
         self.obs_goals = np.append(
             obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
         )
@@ -634,20 +676,7 @@ class Underwater_navigation:
                 my_open.write(element)
             my_open.close()
 
-        color_img = cv2.resize(256 * obs_img_ray[0] ** 0.45, dsize=(320, 256))
-        color_img = yolo(color_img)
-
         return (
-            (
-                color_img,
-                256 * self.obs_preddepths[0],
-                256 * obs_img_ray[0] ** 0.45,
-                (
-                    obs_goal_depthfromwater[0],
-                    obs_goal_depthfromwater[1],
-                    obs_goal_depthfromwater[2],
-                ),
-            ),
             self.obs_preddepths,
             self.obs_goals,
             self.obs_rays,

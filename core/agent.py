@@ -50,7 +50,7 @@ def collect_samples(
     print(time.time())
 
     while num_steps < min_batch_size:
-        color_img, img_depth, goal, ray, hist_action = env.reset()
+        img_depth, goal, ray, hist_action = env.reset()
         if running_state is not None:
             # print "before", img_depth.shape, goal.shape, img_depth.dtype
             # print "first_depth_before:", np.max(img_depth), "first_goal_before:", np.max(goal)
@@ -79,16 +79,15 @@ def collect_samples(
             hist_action_var = tensor(hist_action).unsqueeze(0)
             with torch.no_grad():
                 if mean_action:
-                    action = policy(
-                        color_img, img_depth_var, goal_var, ray_var, hist_action_var
-                    )[0][0].numpy()
+                    action = policy(img_depth_var, goal_var, ray_var, hist_action_var)[
+                        0
+                    ][0].numpy()
                 else:
                     action = policy.select_action(
-                        color_img, img_depth_var, goal_var, ray_var, hist_action_var
+                        img_depth_var, goal_var, ray_var, hist_action_var
                     )[0].numpy()
             action = int(action) if policy.is_disc_action else action.astype(np.float64)
             (
-                next_color_img,
                 next_img_depth,
                 next_goal,
                 next_ray,
@@ -126,7 +125,6 @@ def collect_samples(
             mask = 0 if done else 1
 
             memory.push(
-                color_img,
                 img_depth,
                 goal,
                 ray,
@@ -148,7 +146,6 @@ def collect_samples(
                     num_steps_episodes += t
                 break
 
-            color_img = next_color_img
             img_depth = next_img_depth
             goal = next_goal
             ray = next_ray
