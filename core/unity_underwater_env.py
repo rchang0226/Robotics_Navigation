@@ -598,7 +598,10 @@ class Underwater_navigation:
 
         obs_goal = np.reshape(np.array(obs_goal_depthfromwater[0:3]), (1, DIM_GOAL))
 
-        if "bottle" in color_img.pandas().xyxy[0]["name"].values:
+        if any(
+            x in color_img.pandas().xyxy[0]["name"].values
+            for x in ["bottle", "person", "fire hydrant", "vase", "toothbrush"]
+        ):
             print(color_img.pandas().xyxy[0]["name"][0])
             xmin = color_img.pandas().xyxy[0]["xmin"][0]
             xmax = color_img.pandas().xyxy[0]["xmax"][0]
@@ -619,12 +622,19 @@ class Underwater_navigation:
             vertical = depth * math.sin(math.radians(vdeg))
             hdeg = (80 - xmid) / 2
             obs_goal = np.reshape(np.array([horizontal, vertical, hdeg]), (1, DIM_GOAL))
+            self.obs_goals = np.append(
+                obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
+            )
         else:
-            print("Using known goal location")
-
-        self.obs_goals = np.append(
-            obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
-        )
+            # self.obs_goals = np.append(
+            #     np.reshape(np.array([1, 0, 0]), (1, DIM_GOAL)),
+            #     self.obs_goals[: (self.HIST - 1), :],
+            #     axis=0,
+            # )
+            self.obs_goals = np.append(
+                obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
+            )
+            print("object not detected")
 
         # single beam sonar and adaptation representation
         obs_ray = np.reshape(np.array(obs_ray), (1, 1))
