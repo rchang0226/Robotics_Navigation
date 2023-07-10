@@ -12,3 +12,13 @@ def normal_log_density(x, mean, log_std, std):
     var = std.pow(2)
     log_density = -(x - mean).pow(2) / (2 * var) - 0.5 * math.log(2 * math.pi) - log_std
     return log_density.sum(1, keepdim=True)
+
+
+def normalize_angle(angle):
+    # reduce the angle
+    angle = angle % 360
+
+    # force it to be the positive remainder, so that 0 <= angle < 360
+    angle = (angle + 360) % 360
+
+    return angle

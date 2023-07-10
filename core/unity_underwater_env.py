@@ -374,6 +374,12 @@ class Underwater_navigation:
         # obs_ray = np.array([0])
         obs_goal_depthfromwater = np.array(self.pos_info.goal_depthfromwater_info())
 
+        self.prevPos = (
+            obs_goal_depthfromwater[4],
+            obs_goal_depthfromwater[3],
+            obs_goal_depthfromwater[5],
+        )
+
         if self.training == False:
             my_open = open(
                 os.path.join(assets_dir(), "learned_models/test_pos.txt"), "a"
@@ -432,6 +438,33 @@ class Underwater_navigation:
         else:
             print("Using known goal location")
 
+        x0 = obs_goal_depthfromwater[4]
+        y0 = obs_goal_depthfromwater[3]
+        z0 = obs_goal_depthfromwater[5]
+        currAng = obs_goal_depthfromwater[6]
+        ang = currAng - self.obs_goals[0][2]
+        ang = normalize_angle(ang)
+        if ang > 270:
+            ang = 360 - ang
+            x = x0 - self.obs_goals[0][0] * math.sin(math.radians(ang))
+            z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
+        elif ang > 180:
+            ang = ang - 180
+            x = x0 - self.obs_goals[0][0] * math.sin(math.radians(ang))
+            z = z0 - self.obs_goals[0][0] * math.cos(math.radians(ang))
+        elif ang > 90:
+            ang = 180 - ang
+            x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
+            z = z0 - self.obs_goals[0][0] * math.cos(math.radians(ang))
+        else:
+            x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
+            z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
+
+        y = y0 + self.obs_goals[0][1]
+        self.prevGoal = [x, y, z]
+
+        print(self.prevGoal)
+
         return (
             self.obs_preddepths,
             self.obs_goals,
@@ -475,7 +508,8 @@ class Underwater_navigation:
             obs_goal_depthfromwater[2]: angle from robot's orientation to the goal (degree)
             obs_goal_depthfromwater[3]: robot's current y position
             obs_goal_depthfromwater[4]: robot's current x position            
-            obs_goal_depthfromwater[5]: robot's current z position            
+            obs_goal_depthfromwater[5]: robot's current z position     
+            obs_goal_depthfromwater[6]: robot's current orientation       
         """
         # 1. give a negative reward when robot is too close to nearby obstacles, seafloor or the water surface
         obstacle_distance = (
@@ -625,16 +659,63 @@ class Underwater_navigation:
             self.obs_goals = np.append(
                 obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
             )
+
+            x0 = obs_goal_depthfromwater[4]
+            y0 = obs_goal_depthfromwater[3]
+            z0 = obs_goal_depthfromwater[5]
+            currAng = obs_goal_depthfromwater[6]
+            ang = currAng - self.obs_goals[0][2]
+            ang = normalize_angle(ang)
+            if ang > 270:
+                ang = 360 - ang
+                x = x0 - self.obs_goals[0][0] * math.sin(math.radians(ang))
+                z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
+            elif ang > 180:
+                ang = ang - 180
+                x = x0 - self.obs_goals[0][0] * math.sin(math.radians(ang))
+                z = z0 - self.obs_goals[0][0] * math.cos(math.radians(ang))
+            elif ang > 90:
+                ang = 180 - ang
+                x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
+                z = z0 - self.obs_goals[0][0] * math.cos(math.radians(ang))
+            else:
+                x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
+                z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
+
+            y = y0 + self.obs_goals[0][1]
+            self.prevGoal = [x, y, z]
+            print(self.prevGoal)
+
         else:
             # self.obs_goals = np.append(
             #     np.reshape(np.array([1, 0, 0]), (1, DIM_GOAL)),
             #     self.obs_goals[: (self.HIST - 1), :],
             #     axis=0,
             # )
+            x1 = obs_goal_depthfromwater[4]
+            y1 = obs_goal_depthfromwater[3]
+            z1 = obs_goal_depthfromwater[5]
+            x = self.prevGoal[0]
+            y = self.prevGoal[1]
+            z = self.prevGoal[2]
+
+            ang = obs_goal_depthfromwater[6]
+            goalDir = [x - x1, y - y1, z - z1]
+            horizontal = math.sqrt(goalDir[0] ** 2 + goalDir[2] ** 2)
+            vertical = goalDir[1]
+            a = np.array([goalDir[0], goalDir[2]])
+            a = a / np.linalg.norm(a)
+            b = np.array([0, 1])
+            goalAng = math.degrees(math.acos(np.dot(a, b)))
+            if a[0] < 0:
+                goalAng = 360 - goalAng
+            hdeg = ang - goalAng
+
+            obs_goal = np.reshape(np.array([horizontal, vertical, hdeg]), (1, DIM_GOAL))
             self.obs_goals = np.append(
                 obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
             )
-            print("object not detected")
+            print("object not detected. Angle is {}".format(hdeg))
 
         # single beam sonar and adaptation representation
         obs_ray = np.reshape(np.array(obs_ray), (1, 1))
