@@ -20,11 +20,15 @@ from mlagents_envs.side_channel.side_channel import (
 from mlagents_envs.side_channel.engine_configuration_channel import (
     EngineConfigurationChannel,
 )
+from torchvision import transforms
 from torchvision.transforms import Compose
 from DPT.dpt.models import DPTDepthModel
 from DPT.dpt.midas_net import MidasNet_large
 from DPT.dpt.midas_net_custom import MidasNet_small
 from DPT.dpt.transforms import Resize, NormalizeImage, PrepareForNet
+from nnmodels.funie import GeneratorFunieGAN
+from PIL import Image
+from torchvision.utils import make_grid
 
 DEPTH_IMAGE_WIDTH = 160
 DEPTH_IMAGE_HEIGHT = 128
@@ -213,6 +217,19 @@ class PosChannel(SideChannel):
 
 visibility_constant = 1
 yolo = torch.hub.load("ultralytics/yolov5", "yolov5s", pretrained=True)
+gan = GeneratorFunieGAN()
+gan.load_state_dict(torch.load("funie_generator.pth"))
+if torch.cuda.is_available():
+    gan.cuda()
+gan.eval()
+
+img_width, img_height, channels = 256, 256, 3
+transforms_ = [
+    transforms.Resize((img_height, img_width), Image.BICUBIC),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+]
+transform = transforms.Compose(transforms_)
 
 
 class Underwater_navigation:
@@ -296,6 +313,9 @@ class Underwater_navigation:
                 model_path=os.path.abspath("./")
                 + "/DPT/weights/midas_v21_small-70d6b9c8.pt",
             )
+
+        self.total_steps = 0
+        self.total_correct = 0
 
     def reset(self):
         self.step_count = 0
@@ -411,7 +431,18 @@ class Underwater_navigation:
         # cv2.imwrite("img_depth_pred_reset.png", 256 * self.obs_preddepths[0])
 
         color_img = 256 * obs_img_ray[0] ** 0.45
-        color_img = cv2.resize(color_img, dsize=(320, 256))
+        color_img = Image.fromarray(color_img.astype(np.uint8))
+        color_img = transform(color_img).unsqueeze(0).to(self.device).float()
+        color_img = gan(color_img).detach()
+        grid = make_grid(color_img, normalize=True)
+        color_img = (
+            grid.mul(255)
+            .add_(0.5)
+            .clamp_(0, 255)
+            .permute(1, 2, 0)
+            .to("cpu", torch.uint8)
+            .numpy()
+        )
         color_img = yolo(color_img)
 
         if "bottle" in color_img.pandas().xyxy[0]["name"].values:
@@ -464,6 +495,8 @@ class Underwater_navigation:
         self.prevGoal = [x, y, z]
 
         print(self.prevGoal)
+
+        print("Score: {} / {}".format(self.total_correct, self.total_steps))
 
         return (
             self.obs_preddepths,
@@ -627,10 +660,25 @@ class Underwater_navigation:
             obs_preddepth, self.obs_preddepths[: (self.HIST - 1), :, :], axis=0
         )
 
-        color_img = cv2.resize(256 * obs_img_ray[0] ** 0.45, dsize=(320, 256))
+        color_img = 256 * obs_img_ray[0] ** 0.45
+        color_img = Image.fromarray(color_img.astype(np.uint8))
+        color_img = transform(color_img).unsqueeze(0).to(self.device).float()
+        color_img = gan(color_img).detach()
+        grid = make_grid(color_img, normalize=True)
+        color_img = (
+            grid.mul(255)
+            .add_(0.5)
+            .clamp_(0, 255)
+            .permute(1, 2, 0)
+            .to("cpu", torch.uint8)
+            .numpy()
+        )
         color_img = yolo(color_img)
 
         obs_goal = np.reshape(np.array(obs_goal_depthfromwater[0:3]), (1, DIM_GOAL))
+
+        if "bottle" in color_img.pandas().xyxy[0]["name"].values:
+            self.total_correct += 1
 
         if any(
             x in color_img.pandas().xyxy[0]["name"].values
@@ -716,6 +764,8 @@ class Underwater_navigation:
                 obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
             )
             print("object not detected. Angle is {}".format(hdeg))
+
+        self.total_steps += 1
 
         # single beam sonar and adaptation representation
         obs_ray = np.reshape(np.array(obs_ray), (1, 1))
