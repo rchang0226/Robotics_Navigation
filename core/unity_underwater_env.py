@@ -318,7 +318,11 @@ class Underwater_navigation:
         self.total_steps = 0
         self.total_correct = 0
 
+        self.total_episodes = 0
+        self.reach_goal = 0
+
     def reset(self):
+        self.total_episodes += 1
         self.step_count = 0
         if self.randomization == True:
             if self.adaptation == True:
@@ -483,7 +487,7 @@ class Underwater_navigation:
         x0 = obs_goal_depthfromwater[4]
         y0 = obs_goal_depthfromwater[3]
         z0 = obs_goal_depthfromwater[5]
-        currAng = obs_goal_depthfromwater[6]
+        currAng = normalize_angle(obs_goal_depthfromwater[6])
         ang = currAng - self.obs_goals[0][2]
         ang = normalize_angle(ang)
         if ang > 270:
@@ -517,7 +521,7 @@ class Underwater_navigation:
             y = self.prevGoal[1]
             z = self.prevGoal[2]
 
-            ang = obs_goal_depthfromwater[6]
+            ang = normalize_angle(obs_goal_depthfromwater[6])
             goalDir = [x - x1, y - y1, z - z1]
             horizontal = math.sqrt(goalDir[0] ** 2 + goalDir[2] ** 2)
             vertical = goalDir[1]
@@ -536,6 +540,7 @@ class Underwater_navigation:
             self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
 
         print("Score: {} / {}".format(self.total_correct, self.total_steps))
+        print("Scorev2: {} / {}".format(self.reach_goal, self.total_episodes))
 
         return (
             self.obs_preddepths,
@@ -644,6 +649,7 @@ class Underwater_navigation:
                 )
                 done = True
                 print("Reached the goal area!")
+                self.reach_goal += 1
             else:
                 reward_goal_reached = 0
         else:
@@ -655,6 +661,7 @@ class Underwater_navigation:
                 )
                 done = True
                 print("Reached the goal area!")
+                self.reach_goal += 1
             else:
                 reward_goal_reached = 0
 
@@ -740,23 +747,23 @@ class Underwater_navigation:
                 horizontal = depth * abs(math.cos(math.radians(vdeg)))
                 vertical = depth * math.sin(math.radians(vdeg))
                 hdeg = (80 - xmid) / 2
-                if self.firstDetect:
-                    self.obs_goals = np.array(
-                        [[horizontal, vertical, hdeg]] * self.HIST
-                    )
-                else:
-                    obs_goal = np.reshape(
-                        np.array([horizontal, vertical, hdeg]), (1, DIM_GOAL)
-                    )
-                    self.obs_goals = np.append(
-                        obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
-                    )
+                # if self.firstDetect:
+                #     self.obs_goals = np.array(
+                #         [[horizontal, vertical, hdeg]] * self.HIST
+                #     )
+                # else:
+                obs_goal = np.reshape(
+                    np.array([horizontal, vertical, hdeg]), (1, DIM_GOAL)
+                )
+                self.obs_goals = np.append(
+                    obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
+                )
                 self.firstDetect = False
 
                 x0 = obs_goal_depthfromwater[4]
                 y0 = obs_goal_depthfromwater[3]
                 z0 = obs_goal_depthfromwater[5]
-                currAng = obs_goal_depthfromwater[6]
+                currAng = normalize_angle(obs_goal_depthfromwater[6])
                 ang = currAng - self.obs_goals[0][2]
                 ang = normalize_angle(ang)
                 if ang > 270:
@@ -794,7 +801,7 @@ class Underwater_navigation:
             y = self.prevGoal[1]
             z = self.prevGoal[2]
 
-            ang = obs_goal_depthfromwater[6]
+            ang = normalize_angle(obs_goal_depthfromwater[6])
             goalDir = [x - x1, y - y1, z - z1]
             horizontal = math.sqrt(goalDir[0] ** 2 + goalDir[2] ** 2)
             vertical = goalDir[1]
