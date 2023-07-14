@@ -444,6 +444,7 @@ class Underwater_navigation:
             .to("cpu", torch.uint8)
             .numpy()
         )
+        # color_img = cv2.resize(color_img, dsize=(320, 256))
         color_img = yolo(color_img)
 
         for index, name in enumerate(color_img.pandas().xyxy[0]["name"].values):
@@ -468,12 +469,10 @@ class Underwater_navigation:
                 vertical = depth * math.sin(math.radians(vdeg))
                 hdeg = (80 - xmid) / 2
                 self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
+                self.randomGoal = False
         else:
-            hor = obs_goal_depthfromwater[0] + random.uniform(-5, 5)
-            ver = obs_goal_depthfromwater[1] + random.uniform(-0.5, 0.5)
-            deg = obs_goal_depthfromwater[2] + random.randrange(-20, 20, 1)
-            self.obs_goals = np.array([[hor, ver, deg]] * self.HIST)
             print("Using known goal location")
+            self.randomGoal = True
 
         x0 = obs_goal_depthfromwater[4]
         y0 = obs_goal_depthfromwater[3]
@@ -499,8 +498,36 @@ class Underwater_navigation:
 
         y = y0 + self.obs_goals[0][1]
         self.prevGoal = [x, y, z]
-
         print(self.prevGoal)
+        if self.randomGoal:
+            self.prevGoal[0] += random.uniform(-3, 3)
+            self.prevGoal[1] += random.uniform(-0.25, 0.25)
+            self.prevGoal[2] += random.uniform(-3, 3)
+            print(self.prevGoal)
+            x1 = obs_goal_depthfromwater[4]
+            y1 = obs_goal_depthfromwater[3]
+            z1 = obs_goal_depthfromwater[5]
+            x = self.prevGoal[0]
+            y = self.prevGoal[1]
+            z = self.prevGoal[2]
+
+            ang = obs_goal_depthfromwater[6]
+            goalDir = [x - x1, y - y1, z - z1]
+            horizontal = math.sqrt(goalDir[0] ** 2 + goalDir[2] ** 2)
+            vertical = goalDir[1]
+            a = np.array([goalDir[0], goalDir[2]])
+            a = a / np.linalg.norm(a)
+            b = np.array([0, 1])
+            goalAng = math.degrees(math.acos(np.dot(a, b)))
+            if a[0] < 0:
+                goalAng = 360 - goalAng
+            hdeg = ang - goalAng
+            if hdeg > 180:
+                hdeg -= 360
+            elif hdeg < -180:
+                hdeg += 360
+
+            self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
 
         print("Score: {} / {}".format(self.total_correct, self.total_steps))
 
@@ -679,6 +706,7 @@ class Underwater_navigation:
             .to("cpu", torch.uint8)
             .numpy()
         )
+        # color_img = cv2.resize(color_img, dsize=(320, 256))
         color_img = yolo(color_img)
 
         obs_goal = np.reshape(np.array(obs_goal_depthfromwater[0:3]), (1, DIM_GOAL))
@@ -736,6 +764,7 @@ class Underwater_navigation:
                 y = y0 + self.obs_goals[0][1]
                 self.prevGoal = [x, y, z]
                 print(self.prevGoal)
+                self.total_correct += 1
 
         else:
             # self.obs_goals = np.append(
