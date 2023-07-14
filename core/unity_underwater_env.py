@@ -29,6 +29,7 @@ from DPT.dpt.transforms import Resize, NormalizeImage, PrepareForNet
 from nnmodels.funie import GeneratorFunieGAN
 from PIL import Image
 from torchvision.utils import make_grid
+import random
 
 DEPTH_IMAGE_WIDTH = 160
 DEPTH_IMAGE_HEIGHT = 128
@@ -445,28 +446,33 @@ class Underwater_navigation:
         )
         color_img = yolo(color_img)
 
-        if "bottle" in color_img.pandas().xyxy[0]["name"].values:
-            print(color_img.pandas().xyxy[0]["name"][0])
-            xmin = color_img.pandas().xyxy[0]["xmin"][0]
-            xmax = color_img.pandas().xyxy[0]["xmax"][0]
-            ymin = color_img.pandas().xyxy[0]["ymin"][0]
-            ymax = color_img.pandas().xyxy[0]["ymax"][0]
-            xmid = (xmin + xmax) / 2
-            xmid = int(xmid / 2)
-            ymid = (ymin + ymax) / 2
-            ymid = int(ymid / 2)
-            # deep = depth[ymid, xmid]
+        for index, name in enumerate(color_img.pandas().xyxy[0]["name"].values):
+            if name == "bottle":
+                print(color_img.pandas().xyxy[0]["name"][index])
+                xmin = color_img.pandas().xyxy[0]["xmin"][index]
+                xmax = color_img.pandas().xyxy[0]["xmax"][index]
+                ymin = color_img.pandas().xyxy[0]["ymin"][index]
+                ymax = color_img.pandas().xyxy[0]["ymax"][index]
+                xmid = (xmin + xmax) / 2
+                xmid = int(xmid / 2)
+                ymid = (ymin + ymax) / 2
+                ymid = int(ymid / 2)
+                # deep = depth[ymid, xmid]
 
-            # vfov = 64 ish
-            # hfov = 80
-            size = (xmax - xmin) * (ymax - ymin) / 4
-            depth = 1 / size * 1200
-            vdeg = (64 - ymid) / 2
-            horizontal = depth * abs(math.cos(math.radians(vdeg)))
-            vertical = depth * math.sin(math.radians(vdeg))
-            hdeg = (80 - xmid) / 2
-            self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
+                # vfov = 64 ish
+                # hfov = 80
+                size = (xmax - xmin) * (ymax - ymin) / 4
+                depth = 1 / size * 1200
+                vdeg = (64 - ymid) / 2
+                horizontal = depth * abs(math.cos(math.radians(vdeg)))
+                vertical = depth * math.sin(math.radians(vdeg))
+                hdeg = (80 - xmid) / 2
+                self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
         else:
+            hor = obs_goal_depthfromwater[0] + random.uniform(-5, 5)
+            ver = obs_goal_depthfromwater[1] + random.uniform(-0.5, 0.5)
+            deg = obs_goal_depthfromwater[2] + random.randrange(-20, 20, 1)
+            self.obs_goals = np.array([[hor, ver, deg]] * self.HIST)
             print("Using known goal location")
 
         x0 = obs_goal_depthfromwater[4]
@@ -677,62 +683,59 @@ class Underwater_navigation:
 
         obs_goal = np.reshape(np.array(obs_goal_depthfromwater[0:3]), (1, DIM_GOAL))
 
-        if "bottle" in color_img.pandas().xyxy[0]["name"].values:
-            self.total_correct += 1
+        for index, name in enumerate(color_img.pandas().xyxy[0]["name"].values):
+            if name == "bottle":
+                print(color_img.pandas().xyxy[0]["name"][index])
+                xmin = color_img.pandas().xyxy[0]["xmin"][index]
+                xmax = color_img.pandas().xyxy[0]["xmax"][index]
+                ymin = color_img.pandas().xyxy[0]["ymin"][index]
+                ymax = color_img.pandas().xyxy[0]["ymax"][index]
+                xmid = (xmin + xmax) / 2
+                xmid = int(xmid / 2)
+                ymid = (ymin + ymax) / 2
+                ymid = int(ymid / 2)
+                # deep = depth[ymid, xmid]
 
-        if any(
-            x in color_img.pandas().xyxy[0]["name"].values
-            for x in ["bottle", "person", "fire hydrant", "vase", "toothbrush"]
-        ):
-            print(color_img.pandas().xyxy[0]["name"][0])
-            xmin = color_img.pandas().xyxy[0]["xmin"][0]
-            xmax = color_img.pandas().xyxy[0]["xmax"][0]
-            ymin = color_img.pandas().xyxy[0]["ymin"][0]
-            ymax = color_img.pandas().xyxy[0]["ymax"][0]
-            xmid = (xmin + xmax) / 2
-            xmid = int(xmid / 2)
-            ymid = (ymin + ymax) / 2
-            ymid = int(ymid / 2)
-            # deep = depth[ymid, xmid]
+                # vfov = 64 ish
+                # hfov = 80
+                size = (xmax - xmin) * (ymax - ymin) / 4
+                depth = 1 / size * 1200
+                vdeg = (64 - ymid) / 2
+                horizontal = depth * abs(math.cos(math.radians(vdeg)))
+                vertical = depth * math.sin(math.radians(vdeg))
+                hdeg = (80 - xmid) / 2
+                obs_goal = np.reshape(
+                    np.array([horizontal, vertical, hdeg]), (1, DIM_GOAL)
+                )
+                self.obs_goals = np.append(
+                    obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
+                )
 
-            # vfov = 64 ish
-            # hfov = 80
-            size = (xmax - xmin) * (ymax - ymin) / 4
-            depth = 1 / size * 1200
-            vdeg = (64 - ymid) / 2
-            horizontal = depth * abs(math.cos(math.radians(vdeg)))
-            vertical = depth * math.sin(math.radians(vdeg))
-            hdeg = (80 - xmid) / 2
-            obs_goal = np.reshape(np.array([horizontal, vertical, hdeg]), (1, DIM_GOAL))
-            self.obs_goals = np.append(
-                obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
-            )
+                x0 = obs_goal_depthfromwater[4]
+                y0 = obs_goal_depthfromwater[3]
+                z0 = obs_goal_depthfromwater[5]
+                currAng = obs_goal_depthfromwater[6]
+                ang = currAng - self.obs_goals[0][2]
+                ang = normalize_angle(ang)
+                if ang > 270:
+                    ang = 360 - ang
+                    x = x0 - self.obs_goals[0][0] * math.sin(math.radians(ang))
+                    z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
+                elif ang > 180:
+                    ang = ang - 180
+                    x = x0 - self.obs_goals[0][0] * math.sin(math.radians(ang))
+                    z = z0 - self.obs_goals[0][0] * math.cos(math.radians(ang))
+                elif ang > 90:
+                    ang = 180 - ang
+                    x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
+                    z = z0 - self.obs_goals[0][0] * math.cos(math.radians(ang))
+                else:
+                    x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
+                    z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
 
-            x0 = obs_goal_depthfromwater[4]
-            y0 = obs_goal_depthfromwater[3]
-            z0 = obs_goal_depthfromwater[5]
-            currAng = obs_goal_depthfromwater[6]
-            ang = currAng - self.obs_goals[0][2]
-            ang = normalize_angle(ang)
-            if ang > 270:
-                ang = 360 - ang
-                x = x0 - self.obs_goals[0][0] * math.sin(math.radians(ang))
-                z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
-            elif ang > 180:
-                ang = ang - 180
-                x = x0 - self.obs_goals[0][0] * math.sin(math.radians(ang))
-                z = z0 - self.obs_goals[0][0] * math.cos(math.radians(ang))
-            elif ang > 90:
-                ang = 180 - ang
-                x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
-                z = z0 - self.obs_goals[0][0] * math.cos(math.radians(ang))
-            else:
-                x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
-                z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
-
-            y = y0 + self.obs_goals[0][1]
-            self.prevGoal = [x, y, z]
-            print(self.prevGoal)
+                y = y0 + self.obs_goals[0][1]
+                self.prevGoal = [x, y, z]
+                print(self.prevGoal)
 
         else:
             # self.obs_goals = np.append(
@@ -758,6 +761,10 @@ class Underwater_navigation:
             if a[0] < 0:
                 goalAng = 360 - goalAng
             hdeg = ang - goalAng
+            if hdeg > 180:
+                hdeg -= 360
+            elif hdeg < -180:
+                hdeg += 360
 
             obs_goal = np.reshape(np.array([horizontal, vertical, hdeg]), (1, DIM_GOAL))
             self.obs_goals = np.append(
