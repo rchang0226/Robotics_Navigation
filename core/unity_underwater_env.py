@@ -431,6 +431,8 @@ class Underwater_navigation:
         # )
         # cv2.imwrite("img_depth_pred_reset.png", 256 * self.obs_preddepths[0])
 
+        self.firstDetect = True
+
         color_img = 256 * obs_img_ray[0] ** 0.45
         color_img = Image.fromarray(color_img.astype(np.uint8))
         color_img = transform(color_img).unsqueeze(0).to(self.device).float()
@@ -446,6 +448,8 @@ class Underwater_navigation:
         )
         # color_img = cv2.resize(color_img, dsize=(320, 256))
         color_img = yolo(color_img)
+
+        detected = False
 
         for index, name in enumerate(color_img.pandas().xyxy[0]["name"].values):
             if name == "bottle":
@@ -470,7 +474,9 @@ class Underwater_navigation:
                 hdeg = (80 - xmid) / 2
                 self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
                 self.randomGoal = False
-        else:
+                self.firstDetect = False
+                detected = True
+        if not detected:
             print("Using known goal location")
             self.randomGoal = True
 
@@ -711,6 +717,8 @@ class Underwater_navigation:
 
         obs_goal = np.reshape(np.array(obs_goal_depthfromwater[0:3]), (1, DIM_GOAL))
 
+        detected = False
+
         for index, name in enumerate(color_img.pandas().xyxy[0]["name"].values):
             if name == "bottle":
                 print(color_img.pandas().xyxy[0]["name"][index])
@@ -732,12 +740,18 @@ class Underwater_navigation:
                 horizontal = depth * abs(math.cos(math.radians(vdeg)))
                 vertical = depth * math.sin(math.radians(vdeg))
                 hdeg = (80 - xmid) / 2
-                obs_goal = np.reshape(
-                    np.array([horizontal, vertical, hdeg]), (1, DIM_GOAL)
-                )
-                self.obs_goals = np.append(
-                    obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
-                )
+                if self.firstDetect:
+                    self.obs_goals = np.array(
+                        [[horizontal, vertical, hdeg]] * self.HIST
+                    )
+                else:
+                    obs_goal = np.reshape(
+                        np.array([horizontal, vertical, hdeg]), (1, DIM_GOAL)
+                    )
+                    self.obs_goals = np.append(
+                        obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
+                    )
+                self.firstDetect = False
 
                 x0 = obs_goal_depthfromwater[4]
                 y0 = obs_goal_depthfromwater[3]
@@ -764,9 +778,10 @@ class Underwater_navigation:
                 y = y0 + self.obs_goals[0][1]
                 self.prevGoal = [x, y, z]
                 print(self.prevGoal)
+                detected = True
                 self.total_correct += 1
 
-        else:
+        if not detected:
             # self.obs_goals = np.append(
             #     np.reshape(np.array([1, 0, 0]), (1, DIM_GOAL)),
             #     self.obs_goals[: (self.HIST - 1), :],
