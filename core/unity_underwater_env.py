@@ -438,19 +438,19 @@ class Underwater_navigation:
         self.firstDetect = True
 
         color_img = 256 * obs_img_ray[0] ** 0.45
-        color_img = Image.fromarray(color_img.astype(np.uint8))
-        color_img = transform(color_img).unsqueeze(0).to(self.device).float()
-        color_img = gan(color_img).detach()
-        grid = make_grid(color_img, normalize=True)
-        color_img = (
-            grid.mul(255)
-            .add_(0.5)
-            .clamp_(0, 255)
-            .permute(1, 2, 0)
-            .to("cpu", torch.uint8)
-            .numpy()
-        )
-        # color_img = cv2.resize(color_img, dsize=(320, 256))
+        # color_img = Image.fromarray(color_img.astype(np.uint8))
+        # color_img = transform(color_img).unsqueeze(0).to(self.device).float()
+        # color_img = gan(color_img).detach()
+        # grid = make_grid(color_img, normalize=True)
+        # color_img = (
+        #     grid.mul(255)
+        #     .add_(0.5)
+        #     .clamp_(0, 255)
+        #     .permute(1, 2, 0)
+        #     .to("cpu", torch.uint8)
+        #     .numpy()
+        # )
+        color_img = cv2.resize(color_img, dsize=(320, 256))
         color_img = yolo(color_img)
 
         detected = False
@@ -509,37 +509,37 @@ class Underwater_navigation:
         y = y0 + self.obs_goals[0][1]
         self.prevGoal = [x, y, z]
         print(self.prevGoal)
-        if self.randomGoal:
-            self.prevGoal[0] += random.uniform(-3, 3)
-            self.prevGoal[1] += random.uniform(-0.25, 0.25)
-            self.prevGoal[2] += random.uniform(-3, 3)
-            print(self.prevGoal)
-            x1 = obs_goal_depthfromwater[4]
-            y1 = obs_goal_depthfromwater[3]
-            z1 = obs_goal_depthfromwater[5]
-            x = self.prevGoal[0]
-            y = self.prevGoal[1]
-            z = self.prevGoal[2]
+        # if self.randomGoal:
+        #     self.prevGoal[0] += random.uniform(-3, 3)
+        #     self.prevGoal[1] += random.uniform(-0.25, 0.25)
+        #     self.prevGoal[2] += random.uniform(-3, 3)
+        #     print(self.prevGoal)
+        #     x1 = obs_goal_depthfromwater[4]
+        #     y1 = obs_goal_depthfromwater[3]
+        #     z1 = obs_goal_depthfromwater[5]
+        #     x = self.prevGoal[0]
+        #     y = self.prevGoal[1]
+        #     z = self.prevGoal[2]
 
-            ang = normalize_angle(obs_goal_depthfromwater[6])
-            goalDir = [x - x1, y - y1, z - z1]
-            horizontal = math.sqrt(goalDir[0] ** 2 + goalDir[2] ** 2)
-            vertical = goalDir[1]
-            a = np.array([goalDir[0], goalDir[2]])
-            a = a / np.linalg.norm(a)
-            b = np.array([0, 1])
-            goalAng = math.degrees(math.acos(np.dot(a, b)))
-            if a[0] < 0:
-                goalAng = 360 - goalAng
-            hdeg = ang - goalAng
-            if hdeg > 180:
-                hdeg -= 360
-            elif hdeg < -180:
-                hdeg += 360
+        #     ang = normalize_angle(obs_goal_depthfromwater[6])
+        #     goalDir = [x - x1, y - y1, z - z1]
+        #     horizontal = math.sqrt(goalDir[0] ** 2 + goalDir[2] ** 2)
+        #     vertical = goalDir[1]
+        #     a = np.array([goalDir[0], goalDir[2]])
+        #     a = a / np.linalg.norm(a)
+        #     b = np.array([0, 1])
+        #     goalAng = math.degrees(math.acos(np.dot(a, b)))
+        #     if a[0] < 0:
+        #         goalAng = 360 - goalAng
+        #     hdeg = ang - goalAng
+        #     if hdeg > 180:
+        #         hdeg -= 360
+        #     elif hdeg < -180:
+        #         hdeg += 360
 
-            self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
+        #     self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
 
-        print("Score: {} / {}".format(self.total_correct, self.total_steps))
+        # print("Score: {} / {}".format(self.total_correct, self.total_steps))
         print("Scorev2: {} / {}".format(self.reach_goal, self.total_episodes))
 
         return (
@@ -707,19 +707,19 @@ class Underwater_navigation:
         )
 
         color_img = 256 * obs_img_ray[0] ** 0.45
-        color_img = Image.fromarray(color_img.astype(np.uint8))
-        color_img = transform(color_img).unsqueeze(0).to(self.device).float()
-        color_img = gan(color_img).detach()
-        grid = make_grid(color_img, normalize=True)
-        color_img = (
-            grid.mul(255)
-            .add_(0.5)
-            .clamp_(0, 255)
-            .permute(1, 2, 0)
-            .to("cpu", torch.uint8)
-            .numpy()
-        )
-        # color_img = cv2.resize(color_img, dsize=(320, 256))
+        # color_img = Image.fromarray(color_img.astype(np.uint8))
+        # color_img = transform(color_img).unsqueeze(0).to(self.device).float()
+        # color_img = gan(color_img).detach()
+        # grid = make_grid(color_img, normalize=True)
+        # color_img = (
+        #     grid.mul(255)
+        #     .add_(0.5)
+        #     .clamp_(0, 255)
+        #     .permute(1, 2, 0)
+        #     .to("cpu", torch.uint8)
+        #     .numpy()
+        # )
+        color_img = cv2.resize(color_img, dsize=(320, 256))
         color_img = yolo(color_img)
 
         obs_goal = np.reshape(np.array(obs_goal_depthfromwater[0:3]), (1, DIM_GOAL))
@@ -821,7 +821,7 @@ class Underwater_navigation:
             self.obs_goals = np.append(
                 obs_goal, self.obs_goals[: (self.HIST - 1), :], axis=0
             )
-            print("object not detected. Angle is {}".format(hdeg))
+            # print("object not detected. Angle is {}".format(hdeg))
 
         self.total_steps += 1
 
