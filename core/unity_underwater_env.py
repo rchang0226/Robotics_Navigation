@@ -217,7 +217,7 @@ class PosChannel(SideChannel):
 
 
 visibility_constant = 1
-yolo = torch.hub.load("ultralytics/yolov5", "yolov5s", pretrained=True)
+yolo = torch.hub.load("ultralytics/yolov5", "custom", path="best.pt")
 gan = GeneratorFunieGAN()
 gan.load_state_dict(torch.load("funie_generator.pth"))
 if torch.cuda.is_available():
@@ -231,6 +231,8 @@ transforms_ = [
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 ]
 transform = transforms.Compose(transforms_)
+
+yolo.conf = 0.3
 
 
 class Underwater_navigation:
@@ -456,7 +458,7 @@ class Underwater_navigation:
         detected = False
 
         for index, name in enumerate(color_img.pandas().xyxy[0]["name"].values):
-            if name == "bottle":
+            if name == "cup":
                 print(color_img.pandas().xyxy[0]["name"][index])
                 xmin = color_img.pandas().xyxy[0]["xmin"][index]
                 xmax = color_img.pandas().xyxy[0]["xmax"][index]
@@ -506,38 +508,38 @@ class Underwater_navigation:
             x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
             z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
 
-        y = y0 + self.obs_goals[0][1]
+        y = y0 + self.obs_goals[0][1] + 0.25
         self.prevGoal = [x, y, z]
         print(self.prevGoal)
-        # if self.randomGoal:
-        #     self.prevGoal[0] += random.uniform(-3, 3)
-        #     self.prevGoal[1] += random.uniform(-0.25, 0.25)
-        #     self.prevGoal[2] += random.uniform(-3, 3)
-        #     print(self.prevGoal)
-        #     x1 = obs_goal_depthfromwater[4]
-        #     y1 = obs_goal_depthfromwater[3]
-        #     z1 = obs_goal_depthfromwater[5]
-        #     x = self.prevGoal[0]
-        #     y = self.prevGoal[1]
-        #     z = self.prevGoal[2]
+        if self.randomGoal:
+            self.prevGoal[0] += random.uniform(-2, 2)
+            self.prevGoal[1] += random.uniform(-0.25, 0.25)
+            self.prevGoal[2] += random.uniform(-2, 2)
+            print(self.prevGoal)
+            x1 = obs_goal_depthfromwater[4]
+            y1 = obs_goal_depthfromwater[3]
+            z1 = obs_goal_depthfromwater[5]
+            x = self.prevGoal[0]
+            y = self.prevGoal[1]
+            z = self.prevGoal[2]
 
-        #     ang = normalize_angle(obs_goal_depthfromwater[6])
-        #     goalDir = [x - x1, y - y1, z - z1]
-        #     horizontal = math.sqrt(goalDir[0] ** 2 + goalDir[2] ** 2)
-        #     vertical = goalDir[1]
-        #     a = np.array([goalDir[0], goalDir[2]])
-        #     a = a / np.linalg.norm(a)
-        #     b = np.array([0, 1])
-        #     goalAng = math.degrees(math.acos(np.dot(a, b)))
-        #     if a[0] < 0:
-        #         goalAng = 360 - goalAng
-        #     hdeg = ang - goalAng
-        #     if hdeg > 180:
-        #         hdeg -= 360
-        #     elif hdeg < -180:
-        #         hdeg += 360
+            ang = normalize_angle(obs_goal_depthfromwater[6])
+            goalDir = [x - x1, y - y1, z - z1]
+            horizontal = math.sqrt(goalDir[0] ** 2 + goalDir[2] ** 2)
+            vertical = goalDir[1]
+            a = np.array([goalDir[0], goalDir[2]])
+            a = a / np.linalg.norm(a)
+            b = np.array([0, 1])
+            goalAng = math.degrees(math.acos(np.dot(a, b)))
+            if a[0] < 0:
+                goalAng = 360 - goalAng
+            hdeg = ang - goalAng
+            if hdeg > 180:
+                hdeg -= 360
+            elif hdeg < -180:
+                hdeg += 360
 
-        #     self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
+            self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
 
         # print("Score: {} / {}".format(self.total_correct, self.total_steps))
         print("Scorev2: {} / {}".format(self.reach_goal, self.total_episodes))
@@ -727,7 +729,7 @@ class Underwater_navigation:
         detected = False
 
         for index, name in enumerate(color_img.pandas().xyxy[0]["name"].values):
-            if name == "bottle":
+            if name == "cup":
                 print(color_img.pandas().xyxy[0]["name"][index])
                 xmin = color_img.pandas().xyxy[0]["xmin"][index]
                 xmax = color_img.pandas().xyxy[0]["xmax"][index]
@@ -782,7 +784,7 @@ class Underwater_navigation:
                     x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
                     z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
 
-                y = y0 + self.obs_goals[0][1]
+                y = y0 + self.obs_goals[0][1] + 0.5
                 self.prevGoal = [x, y, z]
                 print(self.prevGoal)
                 detected = True

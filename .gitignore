@@ -11,3 +11,9 @@
 yolov5s.pt
 /runs
 /exdark
+best.pt
+bottle-only.pt
+funie_generator.pth
+policy.pth
+running_state.p
+
