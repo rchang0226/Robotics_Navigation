@@ -168,19 +168,22 @@ goal_dim = env[0].observation_space_goal
 ray_dim = env[0].observation_space_ray
 
 """define actor and critic"""
-policy_net = Policy(
-    args.hist_length, env[0].action_space.shape[0], log_std=args.log_std
-)
-policy_net.load_state_dict(torch.load("policy.pth"))
-policy_net.eval()
+# policy_net = Policy(
+#     args.hist_length, env[0].action_space.shape[0], log_std=args.log_std
+# )
+# policy_net.load_state_dict(torch.load("policy.pth"))
+# policy_net.eval()
 
 sys.modules["utils"] = sys.modules["util"]
+sys.modules["models"] = sys.modules["nnmodels"]
 
-with open("running_state.p", "rb") as file:
-    running_state = pickle.load(file)
+with open("assets/learned_models/navigation_ppo_rand_best.p", "rb") as file:
+    policy_net, value_net, running_state = pickle.load(file)
 
 sys.modules["utils"] = sys.modules.pop("util", None)
+sys.modules["models"] = sys.modules.pop("nnmodels", None)
 
+policy_net.eval()
 policy_net.to(device)
 
 """create agent"""

@@ -232,7 +232,7 @@ transforms_ = [
 ]
 transform = transforms.Compose(transforms_)
 
-yolo.conf = 0.3
+yolo.conf = 0.5
 
 
 class Underwater_navigation:
@@ -440,19 +440,19 @@ class Underwater_navigation:
         self.firstDetect = True
 
         color_img = 256 * obs_img_ray[0] ** 0.45
-        # color_img = Image.fromarray(color_img.astype(np.uint8))
-        # color_img = transform(color_img).unsqueeze(0).to(self.device).float()
-        # color_img = gan(color_img).detach()
-        # grid = make_grid(color_img, normalize=True)
-        # color_img = (
-        #     grid.mul(255)
-        #     .add_(0.5)
-        #     .clamp_(0, 255)
-        #     .permute(1, 2, 0)
-        #     .to("cpu", torch.uint8)
-        #     .numpy()
-        # )
-        color_img = cv2.resize(color_img, dsize=(320, 256))
+        color_img = Image.fromarray(color_img.astype(np.uint8))
+        color_img = transform(color_img).unsqueeze(0).to(self.device).float()
+        color_img = gan(color_img).detach()
+        grid = make_grid(color_img, normalize=True)
+        color_img = (
+            grid.mul(255)
+            .add_(0.5)
+            .clamp_(0, 255)
+            .permute(1, 2, 0)
+            .to("cpu", torch.uint8)
+            .numpy()
+        )
+        # color_img = cv2.resize(color_img, dsize=(320, 256))
         color_img = yolo(color_img)
 
         detected = False
@@ -473,11 +473,11 @@ class Underwater_navigation:
                 # vfov = 64 ish
                 # hfov = 80
                 size = (xmax - xmin) * (ymax - ymin) / 4
-                depth = 1 / size * 1200
+                depth = 1 / size * 800
                 vdeg = (64 - ymid) / 2
                 horizontal = depth * abs(math.cos(math.radians(vdeg)))
                 vertical = depth * math.sin(math.radians(vdeg))
-                hdeg = (80 - xmid) / 2
+                hdeg = (64 - xmid) / 1.6
                 self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
                 self.randomGoal = False
                 self.firstDetect = False
@@ -508,14 +508,14 @@ class Underwater_navigation:
             x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
             z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
 
-        y = y0 + self.obs_goals[0][1] + 0.25
+        y = y0 + self.obs_goals[0][1]
         self.prevGoal = [x, y, z]
-        print(self.prevGoal)
+        # print(self.prevGoal)
         if self.randomGoal:
             self.prevGoal[0] += random.uniform(-2, 2)
             self.prevGoal[1] += random.uniform(-0.25, 0.25)
             self.prevGoal[2] += random.uniform(-2, 2)
-            print(self.prevGoal)
+            # print(self.prevGoal)
             x1 = obs_goal_depthfromwater[4]
             y1 = obs_goal_depthfromwater[3]
             z1 = obs_goal_depthfromwater[5]
@@ -623,7 +623,7 @@ class Underwater_navigation:
             * 0.5
         )
         if (
-            obstacle_distance < 0.5
+            obstacle_distance < 0.25
             or np.abs(obs_goal_depthfromwater[3]) < 0.24
             or obstacle_distance_vertical < 0.12
         ):
@@ -709,19 +709,19 @@ class Underwater_navigation:
         )
 
         color_img = 256 * obs_img_ray[0] ** 0.45
-        # color_img = Image.fromarray(color_img.astype(np.uint8))
-        # color_img = transform(color_img).unsqueeze(0).to(self.device).float()
-        # color_img = gan(color_img).detach()
-        # grid = make_grid(color_img, normalize=True)
-        # color_img = (
-        #     grid.mul(255)
-        #     .add_(0.5)
-        #     .clamp_(0, 255)
-        #     .permute(1, 2, 0)
-        #     .to("cpu", torch.uint8)
-        #     .numpy()
-        # )
-        color_img = cv2.resize(color_img, dsize=(320, 256))
+        color_img = Image.fromarray(color_img.astype(np.uint8))
+        color_img = transform(color_img).unsqueeze(0).to(self.device).float()
+        color_img = gan(color_img).detach()
+        grid = make_grid(color_img, normalize=True)
+        color_img = (
+            grid.mul(255)
+            .add_(0.5)
+            .clamp_(0, 255)
+            .permute(1, 2, 0)
+            .to("cpu", torch.uint8)
+            .numpy()
+        )
+        # color_img = cv2.resize(color_img, dsize=(320, 256))
         color_img = yolo(color_img)
 
         obs_goal = np.reshape(np.array(obs_goal_depthfromwater[0:3]), (1, DIM_GOAL))
@@ -744,11 +744,20 @@ class Underwater_navigation:
                 # vfov = 64 ish
                 # hfov = 80
                 size = (xmax - xmin) * (ymax - ymin) / 4
-                depth = 1 / size * 1200
+                depth = 1 / size * 800
                 vdeg = (64 - ymid) / 2
                 horizontal = depth * abs(math.cos(math.radians(vdeg)))
                 vertical = depth * math.sin(math.radians(vdeg))
-                hdeg = (80 - xmid) / 2
+                hdeg = (64 - xmid) / 1.6
+
+                print(
+                    [
+                        horizontal - obs_goal_depthfromwater[0],
+                        vertical - obs_goal_depthfromwater[1],
+                        hdeg - obs_goal_depthfromwater[2],
+                    ]
+                )
+
                 # if self.firstDetect:
                 #     self.obs_goals = np.array(
                 #         [[horizontal, vertical, hdeg]] * self.HIST
@@ -784,9 +793,9 @@ class Underwater_navigation:
                     x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
                     z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
 
-                y = y0 + self.obs_goals[0][1] + 0.5
+                y = y0 + self.obs_goals[0][1]
                 self.prevGoal = [x, y, z]
-                print(self.prevGoal)
+                # print(self.prevGoal)
                 detected = True
                 self.total_correct += 1
 
