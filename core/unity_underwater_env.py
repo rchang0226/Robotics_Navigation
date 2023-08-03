@@ -216,7 +216,7 @@ class PosChannel(SideChannel):
         super().queue_message_to_send(msg)
 
 
-visibility_constant = 1
+visibility_constant = 0.4
 yolo = torch.hub.load("ultralytics/yolov5", "custom", path="best.pt")
 gan = GeneratorFunieGAN()
 gan.load_state_dict(torch.load("funie_generator.pth"))
@@ -323,7 +323,14 @@ class Underwater_navigation:
         self.total_episodes = 0
         self.reach_goal = 0
 
+        self.sum = 0
+        self.sumsq = 0
+
     def reset(self):
+        print("Scorev2: {} / {}".format(self.reach_goal, self.total_episodes))
+        if self.reach_goal >= 10:
+            print("\a")
+        self.start_time = time.time()
         self.total_episodes += 1
         self.step_count = 0
         if self.randomization == True:
@@ -442,7 +449,7 @@ class Underwater_navigation:
         color_img = 256 * obs_img_ray[0] ** 0.45
         color_img = Image.fromarray(color_img.astype(np.uint8))
         color_img = transform(color_img).unsqueeze(0).to(self.device).float()
-        color_img = gan(color_img).detach()
+        # color_img = gan(color_img).detach()
         grid = make_grid(color_img, normalize=True)
         color_img = (
             grid.mul(255)
@@ -453,6 +460,7 @@ class Underwater_navigation:
             .numpy()
         )
         # color_img = cv2.resize(color_img, dsize=(320, 256))
+        # cv2.imwrite("035visibility.png", cv2.cvtColor(color_img, cv2.COLOR_RGB2BGR))
         color_img = yolo(color_img)
 
         detected = False
@@ -508,13 +516,13 @@ class Underwater_navigation:
             x = x0 + self.obs_goals[0][0] * math.sin(math.radians(ang))
             z = z0 + self.obs_goals[0][0] * math.cos(math.radians(ang))
 
-        y = y0 + self.obs_goals[0][1]
+        y = y0 + self.obs_goals[0][1] + 0.25
         self.prevGoal = [x, y, z]
         # print(self.prevGoal)
         if self.randomGoal:
-            self.prevGoal[0] += random.uniform(-2, 2)
-            self.prevGoal[1] += random.uniform(-0.25, 0.25)
-            self.prevGoal[2] += random.uniform(-2, 2)
+            self.prevGoal[0] += random.uniform(-2.5, 2.5)
+            self.prevGoal[1] += random.uniform(-0.15, 0.15)
+            self.prevGoal[2] += random.uniform(-2.5, 2.5)
             # print(self.prevGoal)
             x1 = obs_goal_depthfromwater[4]
             y1 = obs_goal_depthfromwater[3]
@@ -542,7 +550,6 @@ class Underwater_navigation:
             self.obs_goals = np.array([[horizontal, vertical, hdeg]] * self.HIST)
 
         # print("Score: {} / {}".format(self.total_correct, self.total_steps))
-        print("Scorev2: {} / {}".format(self.reach_goal, self.total_episodes))
 
         return (
             self.obs_preddepths,
@@ -664,6 +671,14 @@ class Underwater_navigation:
                 done = True
                 print("Reached the goal area!")
                 self.reach_goal += 1
+                # time successful runs
+                end = time.time()
+                ep_time = end - self.start_time
+                self.sum += ep_time
+                self.sumsq += ep_time**2
+                mean = self.sum / self.reach_goal
+                print("Mean: {}".format(mean))
+                print("Var: {}".format(self.sumsq / self.reach_goal - mean**2))
             else:
                 reward_goal_reached = 0
 
@@ -711,7 +726,7 @@ class Underwater_navigation:
         color_img = 256 * obs_img_ray[0] ** 0.45
         color_img = Image.fromarray(color_img.astype(np.uint8))
         color_img = transform(color_img).unsqueeze(0).to(self.device).float()
-        color_img = gan(color_img).detach()
+        # color_img = gan(color_img).detach()
         grid = make_grid(color_img, normalize=True)
         color_img = (
             grid.mul(255)

@@ -16,4 +16,12 @@ bottle-only.pt
 funie_generator.pth
 policy.pth
 running_state.p
+first_image/
+first_image_rotated/
+full_env/
+large_scene/
+medium_scene/
+run_model.py
+small_scene/
+visibility_images/
 
